@@ -65,7 +65,13 @@ Generate SESSION_SECRET:
 openssl rand -base64 32
 ```
 
-### 3. Create D1 Database
+### 3. Create Local D1 Database
+
+```bash
+npx wrangler d1 execute DB --local --file=./migrations/0001_init.sql
+```
+
+### 3a. Create D1 Database
 
 ```bash
 npx wrangler d1 create best-five-db
