@@ -1,0 +1,7 @@
+# Copy this file to .dev.vars for local development
+# DO NOT commit .dev.vars to git!
+
+GOOGLE_CLIENT_ID=your-google-client-id-here
+GOOGLE_CLIENT_SECRET=your-google-client-secret-here
+GOOGLE_REDIRECT_URI=http://localhost:4321/auth/callback/google
+SESSION_SECRET=your-random-secret-key-at-least-32-characters-long
