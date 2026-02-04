@@ -10,7 +10,7 @@ database_id = "ca58d866-bb97-4575-83d5-b526a214ecef"
 [[r2_buckets]]
 bucket_name = "best-five-images"
 binding = "best_five_images"
-
+ 
 # Note: Set these as environment variables in Cloudflare Pages settings
 # GOOGLE_CLIENT_ID = "your-google-client-id"
 # GOOGLE_CLIENT_SECRET = "your-google-client-secret"
