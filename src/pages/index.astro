@@ -119,14 +119,20 @@ if (user && !Astro.locals.authorized) {
                     <img src="" alt="Preview" class="w-full h-full object-cover">
                   </div>
                   <div class="flex-1">
-                    <input 
-                      type="file" 
-                      id="image-input" 
-                      accept="image/*" 
-                      capture="environment"
-                      class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                    />
-                    <p class="mt-1 text-xs text-slate-500">Max 5MB. On mobile, use camera.</p>
+                    {/* No `capture` attribute: phones then offer their own chooser (take a photo, photo
+                        library, or files) instead of jumping straight to the camera. */}
+                    <label
+                      for="image-input"
+                      class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 focus-within:ring-2 focus-within:ring-orange-500"
+                    >
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                      <span id="image-button-label">Add photo</span>
+                      <input type="file" id="image-input" accept="image/*" class="sr-only" />
+                    </label>
+                    <p class="mt-1 text-xs text-slate-500">Take a photo or choose one. Up to 20MB.</p>
                   </div>
                 </div>
                 <input type="hidden" id="image-url" name="image_url">
@@ -406,6 +412,7 @@ if (user && !Astro.locals.authorized) {
       document.getElementById('item-id').value = '';
       document.getElementById('image-url').value = '';
       document.getElementById('image-preview').classList.add('hidden');
+      document.getElementById('image-button-label').textContent = 'Add photo';
       
       // Set default date to today
       const today = new Date().toISOString().split('T')[0];
@@ -426,11 +433,15 @@ if (user && !Astro.locals.authorized) {
       document.getElementById('url').value = item.url || '';
       document.getElementById('description').value = item.description || '';
       document.getElementById('image-url').value = item.image_url || '';
+      document.getElementById('image-input').value = '';
+      document.getElementById('image-button-label').textContent = item.image_url ? 'Change photo' : 'Add photo';
       
+      const preview = document.getElementById('image-preview');
       if (item.image_url) {
-        const preview = document.getElementById('image-preview');
         preview.querySelector('img').src = item.image_url;
         preview.classList.remove('hidden');
+      } else {
+        preview.classList.add('hidden');
       }
 
       document.getElementById('modal').classList.remove('hidden');
@@ -492,6 +503,7 @@ if (user && !Astro.locals.authorized) {
         const file = e.target.files[0];
         if (!file) return;
 
+        document.getElementById('image-button-label').textContent = 'Change photo';
         const preview = document.getElementById('image-preview');
         const reader = new FileReader();
         reader.onload = (e) => {

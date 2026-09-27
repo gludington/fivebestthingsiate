@@ -134,7 +134,7 @@ logout), the refresh token and the app's roles.
 ## Features in Detail
 
 ### Image Upload
-- **Mobile:** Use `capture="environment"` to access camera directly
+- **Mobile:** The phone's own chooser: take a photo, pick from the library, or browse files
 - **Desktop:** Standard file picker
 - **Storage:** Cloudflare R2 (S3-compatible)
 - **Resizing:** Downscaled in the browser to 1600px WebP/JPEG before upload
