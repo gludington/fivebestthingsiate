@@ -38,12 +38,15 @@ hourly with a refresh token, so a revocation takes effect within an hour; after 
 
 ## Account deletion
 
-When an admin deletes someone at loodingdongs-auth's `/admin`, the auth server `POST`s a signed
-account-purged Security Event Token to `/api/account-deletion`. `src/lib/account.ts` verifies it
-against the auth server's JWKS (issuer, audience = our client ID, `typ: secevent+jwt`, 15-minute
-age) and deletes the user's photos in R2, the groups they own, and their user row, which cascades to
-items, sessions and memberships. The app's account deletion URL on the auth admin page must be
-`https://fivebestthingsiate.loodingdongs.com/api/account-deletion`.
+When an admin deletes someone at loodingdongs-auth's `/admin`, the auth Worker calls
+`AccountDeletion.deleteUser(sub)` in this Worker over a **Service Binding** (Worker-to-Worker RPC
+on the same Cloudflare account). There's no public endpoint: `src/worker.ts` wraps Astro's handler
+and exports the `AccountDeletion` entrypoint, and only Workers that declare a binding to it can
+call it. `deleteUserData` in `src/lib/account.ts` removes the user's photos in R2, the groups they
+own, and their user row, which cascades to items, sessions and memberships.
+
+Deploy this Worker before loodingdongs-auth whenever the entrypoint changes; the auth Worker's
+binding needs it to exist.
 
 ## Groups
 
