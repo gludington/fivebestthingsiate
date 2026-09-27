@@ -1,0 +1,56 @@
+---
+import '../styles/global.css';
+import { Content } from '../content/no-access.md';
+
+const { user, authorized } = Astro.locals;
+
+if (!user) {
+  return Astro.redirect('/');
+}
+if (authorized) {
+  return Astro.redirect('/');
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Five Best Things I Ate</title>
+</head>
+<body class="min-h-screen bg-linear-to-br from-orange-50 via-white to-red-50">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md space-y-8 text-center">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-red-600 text-white shadow-lg">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+        </svg>
+      </div>
+
+      <div class="text-slate-600 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-slate-900 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-slate-900 [&_p]:mt-3 [&_a]:text-orange-600 [&_a]:underline [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:list-inside">
+        <Content />
+      </div>
+
+      <p class="text-sm text-slate-500">Signed in as {user.email}</p>
+
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <a
+          href="/auth/login"
+          class="px-4 py-2 bg-linear-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-xs hover:shadow-md"
+        >
+          I've been given access
+        </a>
+        <form method="post" action="/auth/logout">
+          <button
+            type="submit"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

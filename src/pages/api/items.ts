@@ -1,4 +1,14 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { isValidImageUrl, sweepOrphanedPhotos } from '../../lib/photos';
+
+type ItemInput = {
+  name?: string;
+  date?: string;
+  description?: string;
+  url?: string;
+  image_url?: string;
+};
 
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
@@ -10,7 +20,7 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = env.DB;
   
   try {
     const { results } = await db.prepare(
@@ -40,10 +50,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = env.DB;
   
   try {
-    const { name, date, description, url, image_url } = await request.json();
+    const { name, date, description, url, image_url } = await request.json() as ItemInput;
     
     if (!name || !date) {
       return new Response(JSON.stringify({ error: 'Name and date are required' }), {
@@ -74,10 +84,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    if (!isValidImageUrl(image_url, user.id)) {
+      return new Response(JSON.stringify({ error: 'Invalid image' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get the max order_index for this user
     const maxOrder = await db.prepare(
       'SELECT MAX(order_index) as max_order FROM items WHERE user_id = ?'
-    ).bind(user.id).first();
+    ).bind(user.id).first<{ max_order: number | null }>();
 
     const nextOrder = (maxOrder?.max_order ?? -1) + 1;
     
@@ -86,6 +103,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       VALUES (?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `).bind(user.id, name, date, description || null, url || null, image_url || null, nextOrder).first();
+
+    locals.cfContext.waitUntil(sweepOrphanedPhotos(db, env.PHOTOS, user.id));
     
     return new Response(JSON.stringify(result), {
       status: 201,

@@ -1,4 +1,23 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { shrinkPhoto } from '../../lib/photos';
+
+// The Images binding accepts up to 20 MB.
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+// The browser normally resizes photos well under this. Anything bigger, or HEIC (which most
+// browsers can't display), is shrunk on the server.
+const MAX_STORED_BYTES = 1024 * 1024;
+const NEEDS_CONVERSION = new Set(['image/heic', 'image/heif']);
+
+const EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+};
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -10,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const bucket = locals.runtime.env.IMAGES;
+  const bucket = env.PHOTOS;
   
   try {
     const formData = await request.formData();
@@ -23,33 +42,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return new Response(JSON.stringify({ error: 'File must be an image' }), {
+    // Validate file type. Raster formats only: an SVG served from this origin could run script.
+    if (!EXTENSIONS[file.type]) {
+      return new Response(JSON.stringify({ error: 'File must be a JPEG, PNG, WebP, GIF, AVIF or HEIC image' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return new Response(JSON.stringify({ error: 'File must be less than 5MB' }), {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return new Response(JSON.stringify({ error: 'File must be less than 20MB' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    let photo: Blob = file;
+    let extension = EXTENSIONS[file.type];
+    if (file.size > MAX_STORED_BYTES || NEEDS_CONVERSION.has(file.type)) {
+      try {
+        photo = await shrinkPhoto(env.IMAGES, file);
+        extension = 'webp';
+      } catch (error) {
+        console.error('Error resizing image:', error);
+        return new Response(JSON.stringify({ error: 'Could not process this image. Try a JPEG or PNG.' }), {
+          status: 422,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split('.').pop() || 'jpg';
-    const filename = `${user.id}/${timestamp}-${randomString}.${extension}`;
+    // Unguessable, since /api/images serves any key without a session check.
+    const filename = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
     // Upload to R2
-    const arrayBuffer = await file.arrayBuffer();
-    await bucket.put(filename, arrayBuffer, {
+    await bucket.put(filename, await photo.arrayBuffer(), {
       httpMetadata: {
-        contentType: file.type,
+        contentType: photo.type || file.type,
       },
     });
 

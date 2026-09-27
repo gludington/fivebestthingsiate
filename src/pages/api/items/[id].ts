@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { isValidImageUrl, ownPhotoKey, sweepOrphanedPhotos } from '../../../lib/photos';
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   const user = locals.user;
@@ -10,15 +12,15 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
-  const bucket = locals.runtime.env.IMAGES;
+  const db = env.DB;
+  const bucket = env.PHOTOS;
   const { id } = params;
   
   try {
     // Verify item belongs to user and get image_url
     const item = await db.prepare(
       'SELECT * FROM items WHERE id = ? AND user_id = ?'
-    ).bind(id, user.id).first();
+    ).bind(id, user.id).first<{ image_url: string | null }>();
 
     if (!item) {
       return new Response(JSON.stringify({ error: 'Item not found' }), {
@@ -28,16 +30,17 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     }
 
     // Delete image from R2 if it exists
-    if (item.image_url) {
+    const key = ownPhotoKey(item.image_url, user.id);
+    if (key) {
       try {
-        const filename = item.image_url.replace('/api/images/', '');
-        await bucket.delete(filename);
+        await bucket.delete(key);
       } catch (error) {
         console.error('Error deleting image from R2:', error);
       }
     }
 
-    await db.prepare('DELETE FROM items WHERE id = ?').bind(id).run();
+    await db.prepare('DELETE FROM items WHERE id = ? AND user_id = ?').bind(id, user.id).run();
+    locals.cfContext.waitUntil(sweepOrphanedPhotos(db, bucket, user.id));
     
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
@@ -62,14 +65,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = env.DB;
   const { id } = params;
   
   try {
     // Verify item belongs to user
     const item = await db.prepare(
       'SELECT * FROM items WHERE id = ? AND user_id = ?'
-    ).bind(id, user.id).first();
+    ).bind(id, user.id).first<{ image_url: string | null }>();
 
     if (!item) {
       return new Response(JSON.stringify({ error: 'Item not found' }), {
@@ -78,7 +81,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       });
     }
 
-    const updates = await request.json();
+    const updates = await request.json() as {
+      name?: string;
+      date?: string;
+      description?: string | null;
+      url?: string | null;
+      image_url?: string | null;
+      order_index?: number;
+    };
     
     // Validate max lengths
     if (updates.name !== undefined && updates.name.length > 200) {
@@ -102,6 +112,13 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       });
     }
     
+    if (updates.image_url !== undefined && !isValidImageUrl(updates.image_url, user.id)) {
+      return new Response(JSON.stringify({ error: 'Invalid image' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const fields = [];
     const values = [];
     
@@ -137,10 +154,17 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       });
     }
     
-    values.push(id);
-    const query = `UPDATE items SET ${fields.join(', ')} WHERE id = ? RETURNING *`;
+    values.push(id, user.id);
+    const query = `UPDATE items SET ${fields.join(', ')} WHERE id = ? AND user_id = ? RETURNING *`;
     
     const result = await db.prepare(query).bind(...values).first();
+
+    // A replaced photo is no longer referenced; remove it now rather than waiting for the sweep.
+    const oldKey = ownPhotoKey(item.image_url, user.id);
+    if (updates.image_url !== undefined && oldKey && oldKey !== ownPhotoKey(updates.image_url, user.id)) {
+      locals.cfContext.waitUntil(env.PHOTOS.delete(oldKey));
+    }
+    locals.cfContext.waitUntil(sweepOrphanedPhotos(db, env.PHOTOS, user.id));
     
     return new Response(JSON.stringify(result), {
       status: 200,

@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "fivebestthingsiate",
+  // "main" and the assets binding are filled in by @astrojs/cloudflare at build time.
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+  "routes": [{ "pattern": "fivebestthingsiate.loodingdongs.com", "custom_domain": true }],
+  "vars": {
+    // Sign-in goes through loodingdongs-auth (OIDC). .dev.vars overrides both for local dev.
+    "ISSUER": "https://auth.loodingdongs.com",
+    "APP_URL": "https://fivebestthingsiate.loodingdongs.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fivebest-db",
+      "database_id": "591c0c7d-9670-4730-a342-47555bd67522",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "fivebest-images"
+    }
+  ],
+  // Cloudflare Images: server-side fallback resize for uploads the browser couldn't shrink
+  // (src/lib/photos.ts). 5,000 unique transformations/month free, then $0.50 per 1,000.
+  "images": { "binding": "IMAGES" }
+  // Secrets (wrangler secret put / .dev.vars):
+  //   OIDC_CLIENT_ID, OIDC_CLIENT_SECRET   (register the app at https://auth.loodingdongs.com/admin)
+}

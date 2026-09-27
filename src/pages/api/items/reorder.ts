@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -10,7 +11,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = env.DB;
   
   try {
     const { itemIds } = await request.json() as { itemIds: number[] };

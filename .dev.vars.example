@@ -1,7 +1,11 @@
-# Copy this file to .dev.vars for local development
-# DO NOT commit .dev.vars to git!
-
-GOOGLE_CLIENT_ID=your-google-client-id-here
-GOOGLE_CLIENT_SECRET=your-google-client-secret-here
-GOOGLE_REDIRECT_URI=http://localhost:4321/auth/callback/google
-SESSION_SECRET=your-random-secret-key-at-least-32-characters-long
+# Copy to .dev.vars for local development. DO NOT commit .dev.vars.
+#
+# Run loodingdongs-auth locally (npm run dev there, http://localhost:8787), register this app
+# on http://localhost:8787/admin as a confidential client with
+#   redirect URI:             http://localhost:4321/auth/callback
+#   post-logout redirect URI: http://localhost:4321/
+# and paste its credentials below.
+ISSUER=http://localhost:8787
+APP_URL=http://localhost:4321
+OIDC_CLIENT_ID=
+OIDC_CLIENT_SECRET=

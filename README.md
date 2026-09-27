@@ -1,10 +1,10 @@
-# The Best Five Things I Ate 🍕
+# The Five Best Things I Ate 🍕
 
 A beautiful food tracking app where you can document your favorite dining experiences with photos, dates, notes, and links. Built with Astro, Cloudflare D1, R2, and Google OAuth.
 
 ## Features
 
-- ✅ **Google OAuth** - Secure authentication
+- ✅ **Loodingdongs sign-in** - Google, GitHub or Discord via loodingdongs-auth
 - ✅ **Image uploads** - Store food photos in Cloudflare R2
 - ✅ **Mobile camera support** - Use your phone camera directly
 - ✅ **Responsive design** - Beautiful on desktop and mobile
@@ -15,188 +15,69 @@ A beautiful food tracking app where you can document your favorite dining experi
 
 ## Tech Stack
 
-- **Framework:** Astro (SSR)
-- **Auth:** Arctic (Google OAuth)
+- **Framework:** Astro 7 (SSR) on a Cloudflare Worker
+- **Auth:** [loodingdongs-auth](../loodingdongs-auth) over OpenID Connect (`openid-client`)
 - **Database:** Cloudflare D1 (SQLite)
-- **Storage:** Cloudflare R2 (Image uploads)
-- **Styling:** Tailwind CSS (shadcn design system)
-- **Hosting:** Cloudflare Pages
-- **Runtime:** Node.js
+- **Storage:** Cloudflare R2 (image uploads)
+- **Styling:** Tailwind CSS 4
+- **Hosting:** Cloudflare Workers at https://fivebestthingsiate.loodingdongs.com
 
-## Setup Google OAuth
+## How sign-in works
 
-### 1. Create Google OAuth Credentials
+The app never talks to Google, GitHub or Discord. `/auth/login` sends the user to
+`auth.loodingdongs.com` (authorization code + PKCE), `/auth/callback` exchanges the code, reads the
+profile from UserInfo, and keys the user on the issuer's `sub`. The app then keeps its own session
+in D1 (`sessions` table, 30 days). `POST /auth/logout` deletes that session and also ends the
+loodingdongs-auth session (RP-initiated logout).
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable the Google+ API
-4. Create OAuth credentials:
-   - Application type: **Web application**
-   - **Authorized redirect URIs:**
-     - `http://localhost:4321/auth/callback/google` (local dev)
-     - `https://your-app.pages.dev/auth/callback/google` (production)
-5. Copy your **Client ID** and **Client Secret**
+**Access requires the `fivebest-user` role** on this app, granted at loodingdongs-auth's `/admin`.
+Anyone can sign in, but without the role they get `/no-access` (text in
+`src/content/no-access.md`) and the API answers 403. Roles are stored in the session and re-read
+hourly with a refresh token, so a revocation takes effect within an hour; after a grant, the
+"I've been given access" button signs in again (silently, via SSO) to pick it up immediately.
 
 ## Local Development
 
-### 1. Install Dependencies
+1. Run loodingdongs-auth locally (`npm run dev` in `../loodingdongs-auth`, http://localhost:8787).
+2. On http://localhost:8787/admin, register a **confidential** app with redirect URI
+   `http://localhost:4321/auth/callback` and post-logout redirect URI `http://localhost:4321/`.
+3. Grant yourself the `fivebest-user` role on that app (same admin page; sign in to the app once
+   first so your account exists).
+4. Configure and run this app:
 
 ```bash
-npm install
+pnpm install
+cp .dev.vars.example .dev.vars   # paste OIDC_CLIENT_ID / OIDC_CLIENT_SECRET
+pnpm db:migrate:local
+pnpm dev                         # http://localhost:4321
 ```
 
-### 2. Configure Environment Variables
+D1 and R2 are simulated locally, so image uploads work in dev too.
 
-```bash
-cp .dev.vars.example .dev.vars
-```
+After changing `wrangler.jsonc` or `.dev.vars.example`, regenerate `worker-configuration.d.ts`
+with `pnpm cf-typegen`.
 
-Edit `.dev.vars`:
+## Deploy
 
-```
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-secret
-GOOGLE_REDIRECT_URI=http://localhost:4321/auth/callback/google
-SESSION_SECRET=a-long-random-string-at-least-32-chars
-```
-
-Generate SESSION_SECRET:
-```bash
-openssl rand -base64 32
-```
-
-### 3. Create Local D1 Database
-
-```bash
-npx wrangler d1 execute DB --local --file=./migrations/0001_init.sql
-```
-
-### 3a. Create D1 Database
-
-```bash
-npx wrangler d1 create best-five-db
-```
-
-Update `wrangler.toml` with the `database_id` you receive.
-
-### 4. Create R2 Bucket (for images)
-
-```bash
-npx wrangler r2 bucket create best-five-images
-```
-
-### 5. Run Migration
-
-```bash
-npm run db:migrate:local
-```
-
-### 6. Run Dev Server
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:4321` 🎉
-
-**Note:** Image uploads won't work locally without additional R2 configuration. They'll work automatically in production.
-
-## Deploy to Cloudflare
-
-### 1. Create Production Database
-
-```bash
-npx wrangler d1 create best-five-db
-```
-
-Update `wrangler.toml` with the production `database_id`.
-
-### 2. Run Migration
-
-```bash
-npm run db:migrate
-```
-
-### 3. Create R2 Bucket
-
-```bash
-npx wrangler r2 bucket create best-five-images
-```
-
-### 4. Push to GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
-
-### 5. Deploy to Cloudflare Pages
-
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. **Pages** → **Create a project**
-3. Connect your GitHub repository
-4. Build settings:
-   - **Framework:** Astro
-   - **Build command:** `npm run build`
-   - **Build output:** `dist`
-5. Click **Save and Deploy**
-
-### 6. Configure Environment Variables
-
-In Cloudflare Pages → **Settings** → **Environment variables**:
-
-Add for **Production**:
-- `GOOGLE_CLIENT_ID`: Your Google client ID
-- `GOOGLE_CLIENT_SECRET`: Your Google client secret
-- `GOOGLE_REDIRECT_URI`: `https://your-app.pages.dev/auth/callback/google`
-- `SESSION_SECRET`: Your random secret (32+ characters)
-
-### 7. Bind D1 Database
-
-**Settings** → **Functions** → **D1 database bindings**:
-- Variable name: `DB`
-- D1 database: `best-five-db`
-
-### 8. Bind R2 Bucket
-
-**Settings** → **Functions** → **R2 bucket bindings**:
-- Variable name: `IMAGES`
-- R2 bucket: `best-five-images`
-
-### 9. Update Google OAuth
-
-Go to Google Cloud Console and add your production URL to authorized redirect URIs:
-- `https://your-app.pages.dev/auth/callback/google`
-
-### 10. Redeploy
-
-**Deployments** → Click **...** on latest deployment → **Retry deployment**
-
-🚀 Your app is now live!
+See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Project Structure
 
 ```
-best-five/
-├── migrations/
-│   └── 0001_init.sql              # Database schema
+fivebestthingsiate/
+├── migrations/                    # D1 migrations (wrangler d1 migrations apply)
 ├── src/
-│   ├── env.d.ts                   # TypeScript types
-│   ├── middleware.ts              # Auth middleware
+│   ├── env.d.ts                   # Locals types
+│   ├── middleware.ts              # Loads the session from D1
+│   ├── styles/global.css          # Tailwind entry
 │   ├── lib/
-│   │   └── auth.ts                # Auth utilities
+│   │   └── auth.ts                # OIDC config, user upsert, D1 sessions
 │   └── pages/
 │       ├── index.astro            # Main UI (table + modal)
 │       ├── auth/
-│       │   ├── login/
-│       │   │   └── google.ts      # OAuth initiate
-│       │   ├── callback/
-│       │   │   └── google.ts      # OAuth callback
-│       │   └── logout.ts          # Logout
+│       │   ├── login.ts           # Redirect to loodingdongs-auth
+│       │   ├── callback.ts        # Code exchange, create session
+│       │   └── logout.ts          # POST: end app + auth sessions
 │       └── api/
 │           ├── upload.ts          # Image upload to R2
 │           ├── images/
@@ -205,37 +86,17 @@ best-five/
 │           └── items/
 │               ├── [id].ts        # PATCH, DELETE
 │               └── reorder.ts     # Reorder items
-├── astro.config.mjs               # Astro config
-├── wrangler.toml                  # Cloudflare config
-├── tailwind.config.mjs            # Tailwind config
+├── astro.config.mjs
+├── wrangler.jsonc                 # Worker config: route, D1, R2, vars
+├── worker-configuration.d.ts      # Generated by `pnpm cf-typegen`
 ├── package.json
 └── tsconfig.json
 ```
 
 ## Database Schema
 
-```sql
-CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  name TEXT,
-  picture TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id TEXT NOT NULL,
-  name TEXT NOT NULL CHECK(length(name) <= 200),
-  date TEXT NOT NULL,
-  description TEXT CHECK(length(description) <= 1000),
-  url TEXT CHECK(length(url) <= 500),
-  image_url TEXT,
-  order_index INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
-);
-```
+See `migrations/0001_init.sql`. Users are keyed on the OIDC `sub`; sessions hold the ID token (for
+logout), the refresh token and the app's roles.
 
 ## Features in Detail
 
@@ -243,8 +104,11 @@ CREATE TABLE items (
 - **Mobile:** Use `capture="environment"` to access camera directly
 - **Desktop:** Standard file picker
 - **Storage:** Cloudflare R2 (S3-compatible)
-- **Max size:** 5MB per image
-- **Auto-deletion:** Images deleted when item is deleted
+- **Resizing:** Downscaled in the browser to 1600px WebP/JPEG before upload
+- **Server fallback:** Uploads still over 1MB, or HEIC, are resized by the Cloudflare Images binding
+- **Max size:** 20MB per upload; JPEG, PNG, WebP, GIF, AVIF or HEIC
+- **Caching:** Served with `Cache-Control: immutable` (keys are unique per upload)
+- **Cleanup:** Images are deleted with their item or when replaced; unsaved uploads are swept after 24 hours
 
 ### Responsive Table
 - **Desktop:** Full table with all columns
@@ -280,7 +144,7 @@ GET  /api/images/:path       - Serve image from R2
 
 **100% FREE** on Cloudflare's free tier:
 
-- **Pages:** 500 builds/month, unlimited requests
+- **Workers:** 100K requests/day
 - **D1:** 5GB storage, 5M reads/day, 100K writes/day
 - **R2:** 10GB storage, 1M Class A operations/month
 - **Bandwidth:** Unlimited
@@ -289,23 +153,15 @@ Perfect for personal use!
 
 ## Troubleshooting
 
-### Images not uploading locally
+### "Authentication failed" after signing in
 
-R2 local development requires additional setup. Images will work automatically in production. For local testing, you can:
-1. Deploy to Cloudflare
-2. Or configure local R2 (see Wrangler docs)
+Check the Worker logs (`pnpm exec wrangler tail`). Usually the redirect URI registered at
+loodingdongs-auth doesn't exactly match `APP_URL/auth/callback`, or the client ID/secret is wrong.
 
 ### "Unauthorized" errors
 
-- Check session cookie is set
-- Verify SESSION_SECRET is configured
-- Try logout and login again
-
-### Table not responsive
-
-- Clear browser cache
-- Check Tailwind CSS is loaded
-- Inspect responsive classes (hidden sm:table-cell, etc.)
+- Check the `session` cookie is set
+- Log out and sign in again
 
 ## Customization Ideas
 

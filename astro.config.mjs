@@ -1,13 +1,18 @@
+// @ts-check
 import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
-import tailwind from '@astrojs/tailwind';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  site: 'https://fivebestthingsiate.loodingdongs.com',
   output: 'server',
   adapter: cloudflare({
-    platformProxy: {
-      enabled: true
-    }
+    // Photos are served straight from R2; no Cloudflare Images binding needed.
+    imageService: 'passthrough',
   }),
-  integrations: [tailwind()]
+  // Auth sessions live in D1 (src/lib/auth.ts), so skip Astro's KV-backed sessions.
+  session: false,
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });

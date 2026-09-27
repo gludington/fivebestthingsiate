@@ -1,14 +1,15 @@
--- Users table
-CREATE TABLE IF NOT EXISTS users (
+-- Users, keyed on the loodingdongs-auth OIDC subject (`sub`). Profile fields are refreshed
+-- from UserInfo on every sign-in.
+CREATE TABLE users (
   id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
+  email TEXT NOT NULL,
   name TEXT,
   picture TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Items table for food entries
-CREATE TABLE IF NOT EXISTS items (
+-- Food entries
+CREATE TABLE items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL CHECK(length(name) <= 200),
@@ -21,15 +22,18 @@ CREATE TABLE IF NOT EXISTS items (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Sessions table for auth
-CREATE TABLE IF NOT EXISTS sessions (
+-- App sessions. id_token is the id_token_hint for RP-initiated logout; roles are this app's
+-- roles from loodingdongs-auth, re-read with refresh_token every hour (see src/lib/auth.ts).
+CREATE TABLE sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
+  id_token TEXT,
+  refresh_token TEXT,
+  roles TEXT NOT NULL DEFAULT '[]',
+  roles_checked_at INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Index for faster queries
-CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);
-CREATE INDEX IF NOT EXISTS idx_items_order ON items(user_id, order_index);
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_items_order ON items(user_id, order_index);
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);

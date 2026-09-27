@@ -1,5 +1,11 @@
 ---
+import '../styles/global.css';
+
 const user = Astro.locals.user;
+
+if (user && !Astro.locals.authorized) {
+  return Astro.redirect('/no-access');
+}
 ---
 
 <!DOCTYPE html>
@@ -7,51 +13,44 @@ const user = Astro.locals.user;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Best Five Things I Ate</title>
+  <title>The Five Best Things I Ate</title>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
-  {!user ? (
-    <!-- Landing Page -->
+<body class="min-h-screen bg-linear-to-br from-orange-50 via-white to-red-50">
+  {!user ? ( /* Landing page */
     <div class="min-h-screen flex items-center justify-center p-4">
       <div class="text-center space-y-8 max-w-md">
         <div class="space-y-3">
-          <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-lg">
+          <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-red-600 text-white shadow-lg">
             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
             </svg>
           </div>
-          <h1 class="text-4xl font-bold text-slate-900">The Best Five Things I Ate</h1>
+          <h1 class="text-4xl font-bold text-slate-900">The Five Best Things I Ate</h1>
           <p class="text-lg text-slate-600">Track your favorite food experiences</p>
         </div>
         
         <a 
-          href="/auth/login/google" 
-          class="inline-flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 font-medium text-slate-700 hover:bg-slate-50"
+          href="/auth/login" 
+          class="inline-flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 rounded-lg shadow-xs hover:shadow-md transition-all duration-200 font-medium text-slate-700 hover:bg-slate-50"
         >
-          <svg class="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          Sign in with Google
+          Sign in with Loodingdongs
         </a>
       </div>
     </div>
-  ) : (
-    <!-- Authenticated UI -->
+  ) : ( /* Authenticated UI */
+    <>
     <div class="min-h-screen pb-12">
-      <!-- Header -->
-      <header class="bg-white border-b border-slate-200 sticky top-0 z-10 backdrop-blur-sm bg-white/95">
+      {/* Header */}
+      <header class="bg-white border-b border-slate-200 sticky top-0 z-10 backdrop-blur-xs bg-white/95">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 text-white">
+              <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-orange-500 to-red-600 text-white">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
                 </svg>
               </div>
-              <h1 class="text-xl sm:text-2xl font-bold text-slate-900">The Best Five Things I Ate</h1>
+              <h1 class="text-xl sm:text-2xl font-bold text-slate-900">The Five Best Things I Ate</h1>
             </div>
             
             <div class="flex items-center gap-4">
@@ -61,27 +60,29 @@ const user = Astro.locals.user;
                 )}
                 <span class="text-sm font-medium text-slate-700">{user.name || user.email}</span>
               </div>
-              <a 
-                href="/auth/logout" 
-                class="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-              >
-                Logout
-              </a>
+              <form method="post" action="/auth/logout">
+                <button
+                  type="submit"
+                  class="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                >
+                  Logout
+                </button>
+              </form>
             </div>
           </div>
         </div>
       </header>
 
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Table Card -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Table Card */}
+        <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
           <div class="border-b border-slate-200 bg-white">
             <div class="overflow-x-auto">
               <table class="w-full">
                 <thead class="bg-slate-50">
                   <tr>
                     <th class="w-12 px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      <!-- Drag handle column -->
+                      {/* Drag handle column */}
                     </th>
                     <th class="w-24 sm:w-32 px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Image
@@ -98,7 +99,7 @@ const user = Astro.locals.user;
                     <th class="px-4 py-3 text-right">
                       <button 
                         onclick="openCreateModal()" 
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-xs hover:shadow-md"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -126,13 +127,13 @@ const user = Astro.locals.user;
       </main>
     </div>
 
-    <!-- Modal for Create/Edit -->
+    {/* Modal for Create/Edit */}
     <div id="modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-        <!-- Backdrop -->
+        {/* Backdrop */}
         <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="closeModal()"></div>
 
-        <!-- Modal panel -->
+        {/* Modal panel */}
         <div class="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <form id="item-form" class="bg-white">
             <div class="px-6 py-5 border-b border-slate-200">
@@ -142,7 +143,7 @@ const user = Astro.locals.user;
             <div class="px-6 py-4 space-y-4">
               <input type="hidden" id="item-id" name="id">
 
-              <!-- Image Upload -->
+              {/* Image Upload */}
               <div class="space-y-2">
                 <label class="block text-sm font-medium text-slate-700">Photo</label>
                 <div class="flex items-center gap-4">
@@ -163,7 +164,7 @@ const user = Astro.locals.user;
                 <input type="hidden" id="image-url" name="image_url">
               </div>
 
-              <!-- Name -->
+              {/* Name */}
               <div class="space-y-2">
                 <label for="name" class="block text-sm font-medium text-slate-700">
                   Name <span class="text-red-500">*</span>
@@ -174,12 +175,12 @@ const user = Astro.locals.user;
                   name="name" 
                   required 
                   maxlength="200"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-colors"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-hidden transition-colors"
                   placeholder="What did you eat?"
                 />
               </div>
 
-              <!-- Date -->
+              {/* Date */}
               <div class="space-y-2">
                 <label for="date" class="block text-sm font-medium text-slate-700">
                   Date <span class="text-red-500">*</span>
@@ -189,11 +190,11 @@ const user = Astro.locals.user;
                   id="date" 
                   name="date" 
                   required
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-colors"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-hidden transition-colors"
                 />
               </div>
 
-              <!-- URL -->
+              {/* URL */}
               <div class="space-y-2">
                 <label for="url" class="block text-sm font-medium text-slate-700">
                   Link (Restaurant website, map, etc.)
@@ -203,12 +204,12 @@ const user = Astro.locals.user;
                   id="url" 
                   name="url" 
                   maxlength="500"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-colors"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-hidden transition-colors"
                   placeholder="https://..."
                 />
               </div>
 
-              <!-- Description -->
+              {/* Description */}
               <div class="space-y-2">
                 <label for="description" class="block text-sm font-medium text-slate-700">
                   Notes
@@ -218,7 +219,7 @@ const user = Astro.locals.user;
                   name="description" 
                   maxlength="1000"
                   rows="3"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-colors resize-none"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-hidden transition-colors resize-none"
                   placeholder="Why was it amazing?"
                 ></textarea>
               </div>
@@ -234,7 +235,7 @@ const user = Astro.locals.user;
               </button>
               <button 
                 type="submit" 
-                class="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                class="px-4 py-2 bg-linear-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-xs hover:shadow-md"
               >
                 Save
               </button>
@@ -243,6 +244,7 @@ const user = Astro.locals.user;
         </div>
       </div>
     </div>
+    </>
   )}
 
   <script is:inline>
@@ -488,6 +490,33 @@ const user = Astro.locals.user;
       return div.innerHTML;
     }
 
+    // Downscale photos before upload: phone photos are several MB, and 1600px is plenty for this UI.
+    // Keep in step with MAX_PHOTO_DIMENSION in src/lib/photos.ts.
+    const MAX_IMAGE_DIMENSION = 1600;
+
+    async function resizeImage(file) {
+      try {
+        // Applies EXIF orientation, so rotated phone photos stay upright.
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+
+        const encode = (type) => new Promise((resolve) => canvas.toBlob(resolve, type, 0.82));
+        // Browsers that can't encode WebP hand back a PNG instead; use JPEG there.
+        let blob = await encode('image/webp');
+        if (!blob || blob.type !== 'image/webp') blob = await encode('image/jpeg');
+        return blob && blob.size < file.size ? blob : file;
+      } catch {
+        // Formats this browser can't decode (e.g. HEIC outside Safari) go up as-is; the server
+        // converts them.
+        return file;
+      }
+    }
+
     // Image upload handling
     const imageInput = document.getElementById('image-input');
     if (imageInput) {
@@ -505,7 +534,7 @@ const user = Astro.locals.user;
 
         // Upload to server
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', await resizeImage(file));
 
         try {
           const response = await fetch('/api/upload', {
@@ -513,15 +542,15 @@ const user = Astro.locals.user;
             body: formData
           });
 
+          const data = await response.json();
           if (!response.ok) {
-            throw new Error('Upload failed');
+            throw new Error(data.error || 'Upload failed');
           }
 
-          const data = await response.json();
           document.getElementById('image-url').value = data.url;
         } catch (error) {
           console.error('Error uploading image:', error);
-          alert('Failed to upload image');
+          alert(error.message || 'Failed to upload image');
         }
       });
     }

@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 
-export const GET: APIRoute = async ({ params, locals }) => {
-  const bucket = locals.runtime.env.IMAGES;
+export const GET: APIRoute = async ({ params }) => {
+  const bucket = env.PHOTOS;
   const { path } = params;
 
   if (!path) {
@@ -27,6 +28,11 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
     // 2. Add ETag and other standard R2 properties
     responseHeaders.set('ETag', object.httpEtag);
+    // Keys are unique per upload and never overwritten, so browsers can keep them forever.
+    responseHeaders.set('Cache-Control', 'public, max-age=31536000, immutable');
+    // Never let a stored file be sniffed or run as a document on this origin.
+    responseHeaders.set('X-Content-Type-Options', 'nosniff');
+    responseHeaders.set('Content-Security-Policy', "default-src 'none'; sandbox");
 
     // 3. Add custom metadata if you have any
     if (object.customMetadata) {
