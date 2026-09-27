@@ -2,8 +2,9 @@ import { defineMiddleware } from 'astro:middleware';
 import { env } from 'cloudflare:workers';
 import { hasAccess, refreshRolesIfStale, SESSION_COOKIE, validateSession } from './lib/auth';
 
-// Photos are served by unguessable key and fetched in parallel; skip session work for them.
-const PUBLIC_PREFIXES = ['/api/images/'];
+// Photos are fetched in parallel by key; account deletion is called server-to-server by the auth
+// server with a signed notice (no session).
+const PUBLIC_PREFIXES = ['/api/images/', '/api/account-deletion'];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.user = null;

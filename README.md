@@ -36,6 +36,15 @@ Anyone can sign in, but without the role they get `/no-access` (text in
 hourly with a refresh token, so a revocation takes effect within an hour; after a grant, the
 "I've been given access" button signs in again (silently, via SSO) to pick it up immediately.
 
+## Account deletion
+
+When an admin deletes someone at loodingdongs-auth's `/admin`, the auth server `POST`s a signed
+account-purged Security Event Token to `/api/account-deletion`. `src/lib/account.ts` verifies it
+against the auth server's JWKS (issuer, audience = our client ID, `typ: secevent+jwt`, 15-minute
+age) and deletes the user's photos in R2, the groups they own, and their user row, which cascades to
+items, sessions and memberships. The app's account deletion URL on the auth admin page must be
+`https://fivebestthingsiate.loodingdongs.com/api/account-deletion`.
+
 ## Groups
 
 People can form groups whose members see each other's lists, read-only.
