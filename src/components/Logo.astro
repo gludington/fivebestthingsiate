@@ -1,0 +1,13 @@
+---
+// The logo artwork (public/fivebest.svg) already spells out the app's name, so pages that show
+// it large keep their <h1> for screen readers only.
+interface Props {
+  size?: 'sm' | 'lg';
+  alt?: string;
+}
+const { size = 'sm', alt = '' } = Astro.props;
+// viewBox is 1144 x 1068
+const dims = size === 'lg' ? { width: 256, height: 239 } : { width: 51, height: 48 };
+---
+
+<img src="/fivebest.svg" alt={alt} {...dims} class:list={['inline-block shrink-0', size === 'lg' && 'w-56 sm:w-64 h-auto']} />

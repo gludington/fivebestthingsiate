@@ -1,6 +1,17 @@
 // Photos live in R2 under `${userId}/...` and are referenced from items.image_url as
 // `/api/images/<key>`.
 
+// Item links are shown to other group members, so only http(s) URLs are allowed (no javascript:).
+export function isValidItemUrl(value: unknown): boolean {
+  if (value == null || value === '') return true;
+  if (typeof value !== 'string') return false;
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+
 export const IMAGE_PATH_PREFIX = '/api/images/';
 
 // Longest side for stored photos; the browser resizes to the same size before upload.

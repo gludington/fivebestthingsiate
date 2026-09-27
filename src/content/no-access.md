@@ -2,4 +2,4 @@
 
 ## You don't have access yet
 
-TODO: write this text.
+You've logged in, but do not have permissions here, because I do not want to blow through free hosting limits letting just anybody try this out.  If you want in, <a href="mailto:gludington@gmail.com">email</a> asking to be let in.

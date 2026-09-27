@@ -1,6 +1,9 @@
 ---
 import '../styles/global.css';
 import { Content } from '../content/no-access.md';
+import Logo from '../components/Logo.astro';
+import { env } from 'cloudflare:workers';
+import { listGroups } from '../lib/groups';
 
 const { user, authorized } = Astro.locals;
 
@@ -10,6 +13,9 @@ if (!user) {
 if (authorized) {
   return Astro.redirect('/');
 }
+
+// Invites can be accepted before access is granted; show what's waiting for them.
+const groups = await listGroups(env.DB, user.id);
 ---
 
 <!DOCTYPE html>
@@ -18,19 +24,22 @@ if (authorized) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Five Best Things I Ate</title>
+  <link rel="icon" href="/fivebest.svg" type="image/svg+xml">
 </head>
 <body class="min-h-screen bg-linear-to-br from-orange-50 via-white to-red-50">
   <div class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md space-y-8 text-center">
-      <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-red-600 text-white shadow-lg">
-        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-        </svg>
-      </div>
+      <Logo size="lg" alt="The Five Best Things I Ate" />
 
       <div class="text-slate-600 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-slate-900 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-slate-900 [&_p]:mt-3 [&_a]:text-orange-600 [&_a]:underline [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:list-inside">
         <Content />
       </div>
+
+      {groups.length > 0 && (
+        <p class="text-sm text-slate-600">
+          You've joined {groups.map((g) => g.name).join(', ')}. You'll see {groups.length === 1 ? 'it' : 'them'} once you have access.
+        </p>
+      )}
 
       <p class="text-sm text-slate-500">Signed in as {user.email}</p>
 

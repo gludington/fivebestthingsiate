@@ -1,0 +1,28 @@
+---
+import '../styles/global.css';
+import AppHeader from '../components/AppHeader.astro';
+
+interface Props {
+  title?: string;
+  current?: 'list' | 'groups';
+}
+const { title, current } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title ? `${title} · The Five Best Things I Ate` : 'The Five Best Things I Ate'}</title>
+  <link rel="icon" href="/fivebest.svg" type="image/svg+xml">
+</head>
+<body class="min-h-screen bg-linear-to-br from-orange-50 via-white to-red-50">
+  <div class="min-h-screen pb-12">
+    <AppHeader current={current} />
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <slot />
+    </main>
+  </div>
+</body>
+</html>

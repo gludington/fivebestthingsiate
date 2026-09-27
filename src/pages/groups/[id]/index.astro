@@ -1,0 +1,201 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+import Avatar from '../../../components/Avatar.astro';
+import Flash from '../../../components/Flash.astro';
+import { env } from 'cloudflare:workers';
+import {
+  deleteGroup,
+  ensureInvite,
+  getGroupForMember,
+  hasLiveInvite,
+  listMembers,
+  MAX_GROUP_NAME,
+  normalizeGroupName,
+  removeMember,
+  renameGroup,
+  revokeInvite,
+} from '../../../lib/groups';
+
+const { user, authorized } = Astro.locals;
+if (!user) return Astro.redirect('/');
+if (!authorized) return Astro.redirect('/no-access');
+
+const group = await getGroupForMember(env.DB, Astro.params.id!, user.id);
+if (!group) return Astro.redirect(`/groups?msg=${encodeURIComponent("That group doesn't exist, or you're not in it.")}`);
+
+const isOwner = group.owner_id === user.id;
+const back = (msg: string) => Astro.redirect(`/groups/${group.id}?msg=${encodeURIComponent(msg)}`);
+
+// Every action posts back here, then redirects (so a refresh never repeats it).
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = form.get('action');
+
+  if (action === 'invite') {
+    await ensureInvite(env.DB, group);
+    return back('Invite link ready. It works for 7 days.');
+  }
+  if (action === 'leave' && !isOwner) {
+    await removeMember(env.DB, group, user.id);
+    return Astro.redirect(`/groups?msg=${encodeURIComponent(`You left ${group.name}.`)}`);
+  }
+  if (isOwner) {
+    if (action === 'rename') {
+      const name = normalizeGroupName(form.get('name'));
+      if (!name) return back(`Group names must be 1–${MAX_GROUP_NAME} characters.`);
+      await renameGroup(env.DB, group.id, name);
+      return back('Group renamed.');
+    }
+    if (action === 'remove') {
+      const memberId = String(form.get('member_id') ?? '');
+      await removeMember(env.DB, group, memberId);
+      return back('Member removed.');
+    }
+    if (action === 'revoke') {
+      await revokeInvite(env.DB, group.id);
+      return back('Invite link revoked. Anyone who has it can no longer join.');
+    }
+    if (action === 'delete') {
+      await deleteGroup(env.DB, group.id);
+      return Astro.redirect(`/groups?msg=${encodeURIComponent(`Deleted ${group.name}.`)}`);
+    }
+  }
+  return back("You can't do that in this group.");
+}
+
+const members = await listMembers(env.DB, group.id);
+const inviteUrl = hasLiveInvite(group) ? `${env.APP_URL}/join/${group.invite_token}` : null;
+const inviteExpires = hasLiveInvite(group)
+  ? new Date(group.invite_expires_at! * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  : null;
+
+const button = 'px-4 py-2 text-sm font-medium rounded-lg transition-colors';
+const secondary = `${button} border border-slate-300 text-slate-700 hover:bg-slate-50`;
+const danger = `${button} border border-red-200 text-red-700 hover:bg-red-50`;
+---
+
+<AppLayout title={group.name} current="groups">
+  <div class="max-w-3xl mx-auto space-y-8">
+    <div>
+      <a href="/groups" class="text-sm text-slate-500 hover:text-slate-700">← Groups</a>
+      <h1 class="mt-2 text-2xl font-bold text-slate-900">{group.name}</h1>
+    </div>
+
+    <Flash />
+
+    <section class="bg-white rounded-xl shadow-xs border border-slate-200">
+      <h2 class="px-6 pt-5 font-semibold text-slate-900">Members</h2>
+      <ul class="mt-3 divide-y divide-slate-200">
+        {members.map((member) => (
+          <li class="flex items-center justify-between gap-4 px-6 py-3">
+            <a href={`/groups/${group.id}/${member.id}`} class="flex min-w-0 items-center gap-3 group">
+              <Avatar name={member.name} email={member.email} picture={member.picture} />
+              <span class="min-w-0">
+                <span class="block truncate font-medium text-slate-900 group-hover:text-orange-700">
+                  {member.name || member.email}{member.id === user.id && ' (you)'}
+                </span>
+                <span class="block text-sm text-slate-500">
+                  {member.item_count} {member.item_count === 1 ? 'item' : 'items'}
+                  {member.id === group.owner_id && ' · Owner'}
+                </span>
+              </span>
+            </a>
+            {isOwner && member.id !== user.id && (
+              <form method="post" data-confirm={`Remove ${member.name || member.email} from ${group.name}?`}>
+                <input type="hidden" name="action" value="remove" />
+                <input type="hidden" name="member_id" value={member.id} />
+                <button type="submit" class="text-sm text-slate-500 hover:text-red-600">Remove</button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-xs border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-900">Invite people</h2>
+      {inviteUrl ? (
+        <>
+          <p class="mt-1 text-sm text-slate-600">
+            Anyone with this link can join until {inviteExpires}. They'll see everyone's lists here, and everyone will see theirs.
+          </p>
+          <div class="mt-4 flex flex-col sm:flex-row gap-3">
+            <input
+              id="invite-url"
+              type="text"
+              readonly
+              value={inviteUrl}
+              class="flex-1 px-4 py-2 border border-slate-300 rounded-lg bg-slate-50 text-sm text-slate-700"
+            />
+            <button type="button" id="copy-invite" class={secondary}>Copy link</button>
+            {isOwner && (
+              <form method="post" data-confirm="Revoke this link? Anyone who hasn't used it yet won't be able to join.">
+                <input type="hidden" name="action" value="revoke" />
+                <button type="submit" class={danger}>Revoke</button>
+              </form>
+            )}
+          </div>
+        </>
+      ) : (
+        <form method="post" class="mt-3">
+          <p class="text-sm text-slate-600">Create a link to share. It works for 7 days.</p>
+          <input type="hidden" name="action" value="invite" />
+          <button type="submit" class={`${secondary} mt-4`}>Create invite link</button>
+        </form>
+      )}
+    </section>
+
+    {isOwner ? (
+      <section class="bg-white rounded-xl shadow-xs border border-slate-200 p-6 space-y-6">
+        <div>
+          <h2 class="font-semibold text-slate-900">Rename</h2>
+          <form method="post" class="mt-3 flex flex-col sm:flex-row gap-3">
+            <input type="hidden" name="action" value="rename" />
+            <input
+              type="text"
+              name="name"
+              required
+              maxlength={MAX_GROUP_NAME}
+              value={group.name}
+              class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-hidden transition-colors"
+            />
+            <button type="submit" class={secondary}>Save</button>
+          </form>
+        </div>
+        <div>
+          <h2 class="font-semibold text-slate-900">Delete group</h2>
+          <p class="mt-1 text-sm text-slate-600">Removes the group for everyone. Nobody's list is deleted.</p>
+          <form method="post" class="mt-3" data-confirm={`Delete ${group.name} for everyone?`}>
+            <input type="hidden" name="action" value="delete" />
+            <button type="submit" class={danger}>Delete group</button>
+          </form>
+        </div>
+      </section>
+    ) : (
+      <form method="post" data-confirm={`Leave ${group.name}? You'll need a new invite to rejoin.`}>
+        <input type="hidden" name="action" value="leave" />
+        <button type="submit" class={danger}>Leave group</button>
+      </form>
+    )}
+  </div>
+
+  <script is:inline>
+    document.querySelectorAll('form[data-confirm]').forEach((form) => {
+      form.addEventListener('submit', (e) => {
+        if (!confirm(form.dataset.confirm)) e.preventDefault();
+      });
+    });
+    const copy = document.getElementById('copy-invite');
+    copy?.addEventListener('click', async () => {
+      const input = document.getElementById('invite-url');
+      try {
+        await navigator.clipboard.writeText(input.value);
+        copy.textContent = 'Copied!';
+      } catch {
+        input.select();
+        copy.textContent = 'Press Ctrl+C';
+      }
+      setTimeout(() => (copy.textContent = 'Copy link'), 2000);
+    });
+  </script>
+</AppLayout>

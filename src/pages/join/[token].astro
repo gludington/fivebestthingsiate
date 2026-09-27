@@ -1,0 +1,79 @@
+---
+import '../../styles/global.css';
+import Logo from '../../components/Logo.astro';
+import { env } from 'cloudflare:workers';
+import { findGroupByInvite, isMember, joinGroup } from '../../lib/groups';
+
+const { user, authorized } = Astro.locals;
+const token = Astro.params.token!;
+
+// Sign in first, then come straight back here.
+if (!user) {
+  return Astro.redirect(`/auth/login?returnTo=${encodeURIComponent(`/join/${token}`)}`);
+}
+
+const group = await findGroupByInvite(env.DB, token);
+const alreadyMember = group ? await isMember(env.DB, group.id, user.id) : false;
+
+// Joining is a button press (POST), so link previews in chat apps can't join anyone.
+// People without the fivebest-user role can still join; they'll see the group once it's granted.
+if (Astro.request.method === 'POST' && group) {
+  await joinGroup(env.DB, group.id, user.id);
+  return Astro.redirect(authorized ? `/groups/${group.id}?msg=${encodeURIComponent(`Welcome to ${group.name}!`)}` : '/no-access');
+}
+if (alreadyMember && authorized) {
+  return Astro.redirect(`/groups/${group!.id}`);
+}
+
+const owner = group ? group.owner_name || group.owner_email : null;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join a group · The Five Best Things I Ate</title>
+  <link rel="icon" href="/fivebest.svg" type="image/svg+xml">
+</head>
+<body class="min-h-screen bg-linear-to-br from-orange-50 via-white to-red-50">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md space-y-6 text-center">
+      <Logo size="lg" alt="The Five Best Things I Ate" />
+      {group ? (
+        alreadyMember ? (
+          <>
+            <h1 class="text-2xl font-bold text-slate-900">You're already in {group.name}</h1>
+            <a href="/no-access" class="inline-block text-orange-600 hover:underline">Continue</a>
+          </>
+        ) : (
+          <>
+            <div>
+              <h1 class="text-2xl font-bold text-slate-900">Join {group.name}?</h1>
+              <p class="mt-2 text-slate-600">
+                {owner} invited you. The {group.member_count} {group.member_count === 1 ? 'member' : 'members'} of this group can see each
+                other's lists, and they'll see yours.
+              </p>
+            </div>
+            <form method="post">
+              <button
+                type="submit"
+                class="px-6 py-3 bg-linear-to-r from-orange-500 to-red-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-xs hover:shadow-md"
+              >
+                Join group
+              </button>
+            </form>
+            <p class="text-sm text-slate-500">Signed in as {user.email}</p>
+          </>
+        )
+      ) : (
+        <>
+          <h1 class="text-2xl font-bold text-slate-900">This invite link doesn't work</h1>
+          <p class="text-slate-600">It may have expired or been revoked. Ask whoever sent it for a new one.</p>
+          <a href="/" class="inline-block text-orange-600 hover:underline">Go to your list</a>
+        </>
+      )}
+    </div>
+  </div>
+</body>
+</html>

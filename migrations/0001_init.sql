@@ -35,5 +35,28 @@ CREATE TABLE sessions (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Groups: members can view each other's lists (read-only). The creator owns the group.
+CREATE TABLE groups (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 100),
+  owner_id TEXT NOT NULL,
+  -- Shareable invite link (/join/<token>); NULL when there's no live link.
+  invite_token TEXT UNIQUE,
+  invite_expires_at INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- The owner is a member too.
+CREATE TABLE group_members (
+  group_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (group_id, user_id),
+  FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE INDEX idx_items_order ON items(user_id, order_index);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_group_members_user_id ON group_members(user_id);

@@ -1,0 +1,75 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import Flash from '../../components/Flash.astro';
+import { env } from 'cloudflare:workers';
+import { createGroup, listGroups, MAX_GROUP_NAME, normalizeGroupName } from '../../lib/groups';
+
+const { user, authorized } = Astro.locals;
+if (!user) return Astro.redirect('/');
+if (!authorized) return Astro.redirect('/no-access');
+
+let error: string | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const name = normalizeGroupName(form.get('name'));
+  if (name) {
+    const id = await createGroup(env.DB, user.id, name);
+    return Astro.redirect(`/groups/${id}?msg=${encodeURIComponent('Group created. Share the invite link to add people.')}`);
+  }
+  error = `Give the group a name (up to ${MAX_GROUP_NAME} characters).`;
+}
+
+const groups = await listGroups(env.DB, user.id);
+---
+
+<AppLayout title="Groups" current="groups">
+  <div class="max-w-3xl mx-auto space-y-8">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Groups</h1>
+      <p class="mt-1 text-slate-600">Everyone in a group can see each other's lists.</p>
+    </div>
+
+    <Flash />
+
+    <section class="bg-white rounded-xl shadow-xs border border-slate-200">
+      {groups.length === 0 ? (
+        <p class="px-6 py-10 text-center text-slate-500">You're not in any groups yet. Create one below, or ask someone for an invite link.</p>
+      ) : (
+        <ul class="divide-y divide-slate-200">
+          {groups.map((group) => (
+            <li>
+              <a href={`/groups/${group.id}`} class="flex items-center justify-between gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+                <span class="font-medium text-slate-900">{group.name}</span>
+                <span class="flex items-center gap-3 text-sm text-slate-500">
+                  {group.owner_id === user.id && <span class="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">Owner</span>}
+                  {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section class="bg-white rounded-xl shadow-xs border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-900">Create a group</h2>
+      <form method="post" class="mt-4 flex flex-col sm:flex-row gap-3">
+        <input
+          type="text"
+          name="name"
+          required
+          maxlength={MAX_GROUP_NAME}
+          placeholder="e.g. Family, Lunch crew"
+          class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-hidden transition-colors"
+        />
+        <button
+          type="submit"
+          class="px-4 py-2 bg-linear-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-xs hover:shadow-md"
+        >
+          Create
+        </button>
+      </form>
+      {error && <p class="mt-2 text-sm text-red-600">{error}</p>}
+    </section>
+  </div>
+</AppLayout>

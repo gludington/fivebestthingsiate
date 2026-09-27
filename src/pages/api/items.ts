@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { isValidImageUrl, sweepOrphanedPhotos } from '../../lib/photos';
+import { isValidImageUrl, isValidItemUrl, sweepOrphanedPhotos } from '../../lib/photos';
 
 type ItemInput = {
   name?: string;
@@ -79,6 +79,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (url && url.length > 500) {
       return new Response(JSON.stringify({ error: 'URL must be 500 characters or less' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!isValidItemUrl(url)) {
+      return new Response(JSON.stringify({ error: 'Link must be an http(s) URL' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });

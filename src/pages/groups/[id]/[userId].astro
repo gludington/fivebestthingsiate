@@ -1,0 +1,76 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+import Avatar from '../../../components/Avatar.astro';
+import { env } from 'cloudflare:workers';
+import { getGroupForMember, isMember } from '../../../lib/groups';
+
+const { user, authorized } = Astro.locals;
+if (!user) return Astro.redirect('/');
+if (!authorized) return Astro.redirect('/no-access');
+
+const { id, userId } = Astro.params;
+// Both the viewer and the person whose list this is must be in this group.
+const group = await getGroupForMember(env.DB, id!, user.id);
+if (!group || !(await isMember(env.DB, group.id, userId!))) {
+  return Astro.redirect(`/groups?msg=${encodeURIComponent("That list isn't shared with you.")}`);
+}
+if (userId === user.id) return Astro.redirect('/');
+
+const person = await env.DB
+  .prepare('SELECT id, name, email, picture FROM users WHERE id = ?')
+  .bind(userId)
+  .first<{ id: string; name: string | null; email: string; picture: string | null }>();
+const { results: items } = await env.DB
+  .prepare(
+    `SELECT id, name, date, description, url, image_url FROM items
+     WHERE user_id = ? ORDER BY order_index ASC, created_at DESC`,
+  )
+  .bind(userId)
+  .all<{ id: number; name: string; date: string; description: string | null; url: string | null; image_url: string | null }>();
+
+const displayName = person!.name || person!.email;
+// Dates are calendar days (YYYY-MM-DD), so format in UTC to keep the day.
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const isWebLink = (url: string | null) => !!url && /^https?:\/\//i.test(url);
+---
+
+<AppLayout title={`${displayName}'s list`} current="groups">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <a href={`/groups/${group.id}`} class="text-sm text-slate-500 hover:text-slate-700">← {group.name}</a>
+
+    <div class="flex items-center gap-4">
+      <Avatar name={person!.name} email={person!.email} picture={person!.picture} size="md" />
+      <h1 class="text-2xl font-bold text-slate-900">{displayName}'s five best</h1>
+    </div>
+
+    {items.length === 0 ? (
+      <p class="bg-white rounded-xl shadow-xs border border-slate-200 px-6 py-10 text-center text-slate-500">
+        Nothing here yet.
+      </p>
+    ) : (
+      <ol class="space-y-4">
+        {items.map((item, index) => (
+          <li class="flex gap-4 bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+            <span class="w-6 shrink-0 pt-1 text-right text-lg font-bold text-orange-600">{index + 1}</span>
+            {item.image_url ? (
+              <img src={item.image_url} alt={item.name} loading="lazy" class="w-20 h-20 sm:w-28 sm:h-28 shrink-0 rounded-lg object-cover border border-slate-200" />
+            ) : (
+              <div class="w-20 h-20 sm:w-28 sm:h-28 shrink-0 rounded-lg bg-slate-100 border border-slate-200"></div>
+            )}
+            <div class="min-w-0 flex-1">
+              <h2 class="font-semibold text-slate-900">{item.name}</h2>
+              <p class="text-sm text-slate-500">{formatDate(item.date)}</p>
+              {item.description && <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{item.description}</p>}
+              {isWebLink(item.url) && (
+                <a href={item.url!} target="_blank" rel="noopener noreferrer nofollow" class="mt-2 inline-block text-sm text-orange-600 hover:text-orange-700 hover:underline">
+                  Visit →
+                </a>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    )}
+  </div>
+</AppLayout>

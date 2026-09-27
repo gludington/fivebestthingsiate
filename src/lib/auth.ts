@@ -26,6 +26,11 @@ export async function getOidcConfig(env: Env): Promise<oidc.Configuration> {
   return config;
 }
 
+// A same-site path to return to after sign-in, or '/' for anything else (open-redirect guard).
+export function safeReturnTo(value: string | null | undefined): string {
+  return value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\') ? value : '/';
+}
+
 export function cookieOptions(maxAge: number) {
   return {
     path: '/',

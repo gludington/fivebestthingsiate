@@ -36,6 +36,19 @@ Anyone can sign in, but without the role they get `/no-access` (text in
 hourly with a refresh token, so a revocation takes effect within an hour; after a grant, the
 "I've been given access" button signs in again (silently, via SSO) to pick it up immediately.
 
+## Groups
+
+People can form groups whose members see each other's lists, read-only.
+
+- Anyone with the role can create a group at `/groups` and becomes its **owner**.
+- Members invite others with a **link** (`/join/<token>`, valid 7 days). Any member can create
+  a link when there's no live one; only the owner can revoke it. Joining takes a button press, so
+  chat-app link previews can't join anyone.
+- The owner can rename the group, remove members and delete the group. Members can leave.
+- The role is still required to see anything, but people can accept an invite before they have
+  it; `/no-access` tells them which groups are waiting.
+- Member lists are at `/groups/<group>/<user>`; both people must be in that group.
+
 ## Local Development
 
 1. Run loodingdongs-auth locally (`npm run dev` in `../loodingdongs-auth`, http://localhost:8787).
@@ -71,9 +84,20 @@ fivebestthingsiate/
 │   ├── middleware.ts              # Loads the session from D1
 │   ├── styles/global.css          # Tailwind entry
 │   ├── lib/
-│   │   └── auth.ts                # OIDC config, user upsert, D1 sessions
+│   │   ├── auth.ts                # OIDC config, user upsert, D1 sessions, roles
+│   │   ├── groups.ts              # Groups, members, invite links
+│   │   └── photos.ts              # Photo ownership, resizing, orphan sweep
+│   ├── layouts/AppLayout.astro    # Signed-in page shell (header + nav)
+│   ├── components/                # AppHeader, Logo, Avatar, Flash
 │   └── pages/
-│       ├── index.astro            # Main UI (table + modal)
+│       ├── index.astro            # My list (table + modal)
+│       ├── no-access.astro        # Signed in without the role
+│       ├── groups/
+│       │   ├── index.astro        # My groups, create a group
+│       │   └── [id]/
+│       │       ├── index.astro    # Members, invite link, owner actions
+│       │       └── [userId].astro # A member's list, read-only
+│       ├── join/[token].astro     # Accept an invite
 │       ├── auth/
 │       │   ├── login.ts           # Redirect to loodingdongs-auth
 │       │   ├── callback.ts        # Code exchange, create session

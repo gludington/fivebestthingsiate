@@ -7,6 +7,7 @@ import {
   getOidcConfig,
   LOGIN_COOKIE,
   rolesFrom,
+  safeReturnTo,
   SESSION_COOKIE,
   upsertUser,
   type OidcProfile,
@@ -20,7 +21,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return new Response('Sign-in expired, please try again.', { status: 400 });
   }
 
-  const { verifier, state, nonce } = JSON.parse(saved);
+  const { verifier, state, nonce, returnTo } = JSON.parse(saved);
 
   try {
     const config = await getOidcConfig(env);
@@ -41,7 +42,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     const { sessionId, maxAge } = await createSession(env.DB, userId, tokens, rolesFrom(claims));
     cookies.set(SESSION_COOKIE, sessionId, cookieOptions(maxAge));
 
-    return redirect('/');
+    return redirect(safeReturnTo(returnTo));
   } catch (error) {
     console.error('OIDC callback error:', error);
     return new Response('Authentication failed', { status: 500 });

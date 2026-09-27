@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { isValidImageUrl, ownPhotoKey, sweepOrphanedPhotos } from '../../../lib/photos';
+import { isValidImageUrl, isValidItemUrl, ownPhotoKey, sweepOrphanedPhotos } from '../../../lib/photos';
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   const user = locals.user;
@@ -112,6 +112,13 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       });
     }
     
+    if (updates.url !== undefined && !isValidItemUrl(updates.url)) {
+      return new Response(JSON.stringify({ error: 'Link must be an http(s) URL' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (updates.image_url !== undefined && !isValidImageUrl(updates.image_url, user.id)) {
       return new Response(JSON.stringify({ error: 'Invalid image' }), {
         status: 400,

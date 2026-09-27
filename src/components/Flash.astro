@@ -1,0 +1,8 @@
+---
+// One-line status message passed through a redirect as ?msg=...
+const msg = Astro.url.searchParams.get('msg');
+---
+
+{msg && (
+  <p class="mb-6 rounded-lg border-l-4 border-orange-500 bg-white px-4 py-3 text-sm text-slate-700 shadow-xs">{msg}</p>
+)}

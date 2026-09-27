@@ -1,5 +1,7 @@
 ---
 import '../styles/global.css';
+import AppHeader from '../components/AppHeader.astro';
+import Logo from '../components/Logo.astro';
 
 const user = Astro.locals.user;
 
@@ -14,18 +16,15 @@ if (user && !Astro.locals.authorized) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Five Best Things I Ate</title>
+  <link rel="icon" href="/fivebest.svg" type="image/svg+xml">
 </head>
 <body class="min-h-screen bg-linear-to-br from-orange-50 via-white to-red-50">
   {!user ? ( /* Landing page */
     <div class="min-h-screen flex items-center justify-center p-4">
       <div class="text-center space-y-8 max-w-md">
         <div class="space-y-3">
-          <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-red-600 text-white shadow-lg">
-            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-            </svg>
-          </div>
-          <h1 class="text-4xl font-bold text-slate-900">The Five Best Things I Ate</h1>
+          <Logo size="lg" />
+          <h1 class="sr-only">The Five Best Things I Ate</h1>
           <p class="text-lg text-slate-600">Track your favorite food experiences</p>
         </div>
         
@@ -40,38 +39,7 @@ if (user && !Astro.locals.authorized) {
   ) : ( /* Authenticated UI */
     <>
     <div class="min-h-screen pb-12">
-      {/* Header */}
-      <header class="bg-white border-b border-slate-200 sticky top-0 z-10 backdrop-blur-xs bg-white/95">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-orange-500 to-red-600 text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-                </svg>
-              </div>
-              <h1 class="text-xl sm:text-2xl font-bold text-slate-900">The Five Best Things I Ate</h1>
-            </div>
-            
-            <div class="flex items-center gap-4">
-              <div class="hidden sm:flex items-center gap-3">
-                {user.picture && (
-                  <img src={user.picture} alt={user.name || 'User'} class="w-8 h-8 rounded-full ring-2 ring-slate-200" />
-                )}
-                <span class="text-sm font-medium text-slate-700">{user.name || user.email}</span>
-              </div>
-              <form method="post" action="/auth/logout">
-                <button
-                  type="submit"
-                  class="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                >
-                  Logout
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader current="list" />
 
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Table Card */}
@@ -269,7 +237,7 @@ if (user && !Astro.locals.authorized) {
 
     function formatDate(dateString) {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     }
 
     function renderTable() {
@@ -321,7 +289,7 @@ if (user && !Astro.locals.authorized) {
             ${formatDate(item.date)}
           </td>
           <td class="hidden md:table-cell px-4 py-3">
-            ${item.url ? `
+            ${/^https?:\/\//i.test(item.url || '') ? `
               <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 hover:underline">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>

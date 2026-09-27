@@ -1,16 +1,18 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import * as oidc from 'openid-client';
-import { cookieOptions, getOidcConfig, LOGIN_COOKIE } from '../../lib/auth';
+import { cookieOptions, getOidcConfig, LOGIN_COOKIE, safeReturnTo } from '../../lib/auth';
 
-export const GET: APIRoute = async ({ cookies, redirect }) => {
+export const GET: APIRoute = async ({ url: requestUrl, cookies, redirect }) => {
   const config = await getOidcConfig(env);
   const verifier = oidc.randomPKCECodeVerifier();
   const state = oidc.randomState();
   const nonce = oidc.randomNonce();
 
   // Remembered for the callback; short-lived and httpOnly.
-  cookies.set(LOGIN_COOKIE, JSON.stringify({ verifier, state, nonce }), cookieOptions(60 * 10));
+  // returnTo brings people back to e.g. an invite link after signing in.
+  const returnTo = safeReturnTo(requestUrl.searchParams.get('returnTo'));
+  cookies.set(LOGIN_COOKIE, JSON.stringify({ verifier, state, nonce, returnTo }), cookieOptions(60 * 10));
 
   const url = oidc.buildAuthorizationUrl(config, {
     redirect_uri: `${env.APP_URL}/auth/callback`,
