@@ -23,5 +23,6 @@ dist/
 # wrangler
 .wrangler/
 
-# deploy-time secrets
-.prod-secrets.env
+# deploy-time secrets (e.g. .prod-secrets.env, .prod.secrets.env)
+*.env
+*secrets*
